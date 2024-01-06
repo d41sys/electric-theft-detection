@@ -1,2 +1,5 @@
 data/
 *.csv
+model/
+result/
+__pycache__/
