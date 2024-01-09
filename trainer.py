@@ -122,10 +122,17 @@ class TransformerPredictor(nn.Module):
 
     def forward(self, data, mask):
         x = data.permute(1, 0, 2)
-
+        # print(type(x), x.shape)
+        
         out = self.position_embedding(x)
-        out = self.transformer_encoder(out, src_key_padding_mask=mask)
-        out = out.permute(1, 0, 2)
+        out2 = self.transformer_encoder(out, src_key_padding_mask=mask)
+        if torch.isnan(out2).any(): 
+            with open("nan.txt", "a") as f:
+                f.write('\n' + "="*20+'\n')
+                f.write("data: " + str(data))
+                f.write("PE: " + str(out))
+                f.write(str(out2))
+        out = out2.permute(1, 0, 2)
         out = torch.sum(out, 1)
         out = self.fc(out)
         return out
@@ -144,15 +151,18 @@ def prepare_fin(config):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--indir', type=str, default="data")
+    parser.add_argument('--indir', type=str, default="data/m100")
     parser.add_argument('--window_size', type=int, default=36)
     parser.add_argument('--epoch', type=int, default=100)
     parser.add_argument('--batch_size', type=int, default=32)
-    parser.add_argument('--lr', type=float, default=0.0001)
+    parser.add_argument('--lr', type=float, default=0.001)
     args = parser.parse_args()
 
-    config = Config(args)
+    config = Config(args)   
     prepare_fin(config)
+    
+    # Set print options
+    torch.set_printoptions(profile="full")
     
     seed = 1
     torch.manual_seed(seed)
@@ -191,14 +201,15 @@ if __name__ == '__main__':
         fin.write('-- epoch ' + str(epoch) + '\n')
         for i, sample_batch in enumerate(train_loader):
             batch_data = sample_batch['data'].type(torch.FloatTensor).to(config.device)
+            # batch_data = sample_batch['data'].type(torch.IntTensor).to(config.device)
             batch_mask = sample_batch['mask'].to(config.device)
             batch_label = sample_batch['label'].to(config.device)
-            # print(batch_data[0])
-            # print(batch_mask.shape)
-            # print(batch_label)
-            # dasdsadas
             out = model(batch_data, batch_mask)
+            # print("DATA: ", batch_data)
+            # print("LABEL: ",batch_label)
+            # print("OUT: ", out)
             loss = loss_func(out, batch_label)
+            # print("LOSS: ", loss)
             opt.zero_grad()
             loss.backward()
             opt.step()

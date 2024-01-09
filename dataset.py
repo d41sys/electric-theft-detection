@@ -52,13 +52,15 @@ class DatasetPrepare(Dataset):
         
         # PREPROCESS
         # data = torch.from_numpy(data)
-        data = torch.tensor(data, dtype=torch.float32)
+        # data = torch.tensor(data, dtype=torch.float32)
+        data = torch.tensor(data, dtype=torch.int64)
         label = torch.tensor(label, dtype=torch.long)
+        # print("DATA: ", data, " AND LENGTH: ", len(data))
         
         ori_seq_len = data.shape[0]
         pad_len = self.sequence_size - ori_seq_len
         # print(pad_len)
-        
+        # dasdasf
         ## PAD WITH MAX SIZE = 100
         data = F.pad(data.T, (0, pad_len)).T.numpy()
 
