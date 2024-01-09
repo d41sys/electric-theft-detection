@@ -126,12 +126,12 @@ class TransformerPredictor(nn.Module):
         
         out = self.position_embedding(x)
         out2 = self.transformer_encoder(out, src_key_padding_mask=mask)
-        if torch.isnan(out2).any(): 
-            with open("nan.txt", "a") as f:
-                f.write('\n' + "="*20+'\n')
-                f.write("data: " + str(data))
-                f.write("PE: " + str(out))
-                f.write(str(out2))
+        # if torch.isnan(out2).any(): 
+        #     with open("nan.txt", "a") as f:
+        #         f.write('\n' + "="*20+'\n')
+        #         f.write("data: " + str(data))
+        #         f.write("PE: " + str(out))
+        #         f.write(str(out2))
         out = out2.permute(1, 0, 2)
         out = torch.sum(out, 1)
         out = self.fc(out)
@@ -151,11 +151,11 @@ def prepare_fin(config):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--indir', type=str, default="data/m100")
+    parser.add_argument('--indir', type=str, default="data/outliners2")
     parser.add_argument('--window_size', type=int, default=36)
     parser.add_argument('--epoch', type=int, default=100)
     parser.add_argument('--batch_size', type=int, default=32)
-    parser.add_argument('--lr', type=float, default=0.001)
+    parser.add_argument('--lr', type=float, default=0.0001)
     args = parser.parse_args()
 
     config = Config(args)   
