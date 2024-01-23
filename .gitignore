@@ -5,3 +5,4 @@ result/
 __pycache__/
 *.txt
 dataset
+.DS_Store
