@@ -1,7 +1,6 @@
 import numpy as np
 import torch
 import os
-from tfrecord.torch.dataset import TFRecordDataset
 import math
 import torch.nn.functional as F
 from torch.utils.data import Dataset

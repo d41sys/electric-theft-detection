@@ -42,8 +42,7 @@ def write_result(fin, label_y, pre_y):
 class Config:
     def __init__(self, args):
         self.model_name = 'ETD'
-        self.device = torch.device(
-            'cuda' if torch.cuda.is_available() else 'cpu')
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'mps' if getattr(torch, 'has_mps', False) else 'cpu')
 
         self.dout_mess = 28 # 4 weeks
         self.d_model = self.dout_mess
@@ -66,8 +65,7 @@ class Config:
         self.model_save_path = './model/' + self.model_name + '/'
         if not os.path.exists(self.model_save_path):
             os.mkdir(self.model_save_path)
-        self.result_file = '/home/tiendat/electricity-theft/result/' + \
-            'ETD.txt'
+        self.result_file = 'result/' + 'ETD.txt'
 
         self.isload_model = False
         # self.model_path = 'model/' + self.model_name + '/' + self.model_name + '_model_' + str(self.start_epoch) + '.pth'
