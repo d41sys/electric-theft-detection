@@ -46,9 +46,9 @@ class Config:
         self.model_name = 'ETD'
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'mps' if getattr(torch, 'has_mps', False) else 'cpu')
 
-        self.dout_mess = 16 # 4 weeks
+        self.dout_mess = 20 # 4 weeks
         self.d_model = self.dout_mess
-        self.nhead = 8  # ori: 5
+        self.nhead = 10  # ori: 5
 
         self.pad_size = args.window_size  # 28
         self.window_size = args.window_size  # 28
@@ -107,17 +107,45 @@ class ConvAutoencoder1D(nn.Module):
     def __init__(self, input_dim, output_dim):
         super(ConvAutoencoder1D, self).__init__()
         self.encoder = nn.Sequential(
-            nn.Conv1d(input_dim, 32, kernel_size=3, padding=1),
+            nn.Conv1d(input_dim, 64, kernel_size=3, padding=1),
+            # Original: input_dim -> 32
             nn.ReLU(),
-            nn.Conv1d(32, 64, kernel_size=3, padding=1),
+            nn.Conv1d(64, 128, kernel_size=3, padding=1),
+            # Original: 32 -> 64
             nn.ReLU()
         )
-        self.fc = nn.Linear(64*28, output_dim)
+        self.fc = nn.Linear(128*28, output_dim)
+        # Original: 64*28
     def forward(self, x):
         x = self.encoder(x)
         x = x.view(x.size(0), -1)
         x = self.fc(x)
         return x
+    
+class ConvVAE1D(nn.Module):
+    def __init__(self, input_dim, latent_dim):
+        super(ConvVAE1D, self).__init__()
+        self.encoder = nn.Sequential(
+            nn.Conv1d(input_dim, 64, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.Conv1d(64, 128, kernel_size=3, padding=1),
+            nn.ReLU()
+        )
+        self.fc_mu = nn.Linear(128*28, latent_dim)
+        self.fc_logvar = nn.Linear(128*28, latent_dim)
+
+    def reparameterize(self, mu, logvar):
+        std = torch.exp(0.5*logvar)
+        eps = torch.randn_like(std)
+        return mu + eps*std
+
+    def forward(self, x):
+        x = self.encoder(x)
+        x = x.view(x.size(0), -1)
+        mu = self.fc_mu(x)
+        logvar = self.fc_logvar(x)
+        z = self.reparameterize(mu, logvar)
+        return z
     
 class DNN(nn.Module):
     def __init__(self, d_in, d_out):  # config.slsum_count, config.dnn_out_d
@@ -184,6 +212,7 @@ class TransformerPredictor(nn.Module):
             # sharp of cae_out is (batch_size, 20, 36)
             
         x = cae_out.permute(2, 0, 1)
+        
         # sharp of x is (36, batch_size, 20)
         
         # Autoencoder 1D =======================================================
