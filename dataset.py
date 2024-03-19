@@ -14,7 +14,7 @@ class DatasetPrepare(Dataset):
         if is_train:
             self.root_dir = os.path.join(root_dir, 'train')
         else:
-            self.root_dir = os.path.join(root_dir, 'test')
+            self.root_dir = os.path.join(root_dir, 'val')
         # self.root_dir = root_dir
         self.transform = transform
         self.pad_size = pad_size
@@ -81,3 +81,4 @@ class DatasetPrepare(Dataset):
             sample = self.transform(sample)
             
         return sample
+    

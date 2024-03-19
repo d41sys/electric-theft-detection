@@ -329,10 +329,10 @@ def prepare_fin(config):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--indir', type=str, default="data/outliners_ksm/")
-    parser.add_argument('--window_size', type=int, default=36)
-    parser.add_argument('--epoch', type=int, default=300)
-    parser.add_argument('--batch_size', type=int, default=32)
+    parser.add_argument('--indir', type=str, default="data/ksm_transformer/")
+    parser.add_argument('--window_size', type=int, default=37)
+    parser.add_argument('--epoch', type=int, default=200)
+    parser.add_argument('--batch_size', type=int, default=128)
     parser.add_argument('--lr', type=float, default=0.0001)
     args = parser.parse_args()
 

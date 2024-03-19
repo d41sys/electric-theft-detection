@@ -6,3 +6,4 @@ __pycache__/
 *.txt
 dataset
 .DS_Store
+save/
