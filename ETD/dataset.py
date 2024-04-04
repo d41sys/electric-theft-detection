@@ -32,7 +32,7 @@ class ETDDataset(Dataset):
         data = torch.tensor(data, dtype=torch.float)
         label = torch.tensor(label, dtype=torch.long)
         
-        data = data.view(-1, self.window_size, ID_LEN)
+        data = data.view(-1, self.window_size, ID_LEN) # 33x33 1x33x33
         
         # ori_seq_len = data.shape[0]
         # pad_len = self.window_size - ori_seq_len
