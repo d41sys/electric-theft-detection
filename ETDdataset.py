@@ -5,10 +5,6 @@ from tfrecord.torch.dataset import TFRecordDataset
 from torch.utils.data import Dataset
 import torch.nn.functional as F
 
-ID_LEN = 29 #CAN bus 2.0 has 29 bits
-DATA_LEN = 8 #Data field in Can message has 8 bytes
-HIST_LEN = 256
-
 class ETDdataset(Dataset):
     def __init__(self, root_dir, window_size, is_train=True, include_data=False, transform=None):
         if is_train:

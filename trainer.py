@@ -46,16 +46,23 @@ class Config:
         self.model_name = 'ETD'
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'mps' if getattr(torch, 'has_mps', False) else 'cpu')
 
-        self.dout_mess = 20 # 4 weeks
-        self.d_model = self.dout_mess
-        self.nhead = 10  # ori: 5
+        if args.mode == 'cae':
+            self.dout_mess = 20 # 4 weeks
+            self.d_model = self.dout_mess
+            self.nhead = 10  # ori: 5
+        else:
+            self.dout_mess = 30
+            self.d_model = 30
+            self.nhead = 10  # ori: 5
 
-        self.pad_size = args.window_size  # 28
-        self.window_size = args.window_size  # 28
+        self.pad_size = args.window_size  
+        self.window_size = args.window_size  
         self.max_time_position = 10000
         self.num_layers = 6
         self.gran = 1e-7  # ori: 1e-6
         self.log_e = 2
+        
+        self.mode = args.mode
 
         self.classes_num = 2
 
@@ -114,7 +121,7 @@ class ConvAutoencoder1D(nn.Module):
             # Original: 32 -> 64
             nn.ReLU()
         )
-        self.fc = nn.Linear(128*28, output_dim)
+        self.fc = nn.Linear(128*30, output_dim)
         # Original: 64*28
     def forward(self, x):
         x = self.encoder(x)
@@ -188,6 +195,7 @@ class TransformerPredictor(nn.Module):
         self.ae = Autoencoder1D(28, config.dout_mess).to(config.device)
         self.cae = ConvAutoencoder1D(1, config.dout_mess).to(config.device)
         self.dout_mess = config.dout_mess
+        self.mode = config.mode
         
         self.position_embedding = PositionalEncoding(config.d_model, dropout=0.0, max_len=config.max_time_position).to(config.device)
 
@@ -202,18 +210,25 @@ class TransformerPredictor(nn.Module):
         # With AE 
         x = data
         # print("X: ", x.shape)
-        # Conv Autoencoder 1D =================================================
-        cae_out = torch.empty((x.shape[0], self.dout_mess, 0)).to(config.device)
-        for i in range(self.pad_size):
-            # shape of x[:, i, :] is (batch_size, 28)
-            # tmp = self.cae(x[:, i, :]).unsqueeze(2)
-            tmp = self.cae(x[:, i:i+1, :]).unsqueeze(2)
-            cae_out = torch.concat((cae_out, tmp), dim=2)
-            # sharp of cae_out is (batch_size, 20, 36)
-            
-        x = cae_out.permute(2, 0, 1)
+        # X:  torch.Size([128, 37, 28])
         
-        # sharp of x is (36, batch_size, 20)
+        if self.mode == 'cae':
+            # Conv Autoencoder 1D =================================================   
+            cae_out = torch.empty((x.shape[0], self.dout_mess, 0)).to(config.device)
+            for i in range(self.pad_size):
+                # shape of x[:, i, :] is (batch_size, 28)
+                # tmp = self.cae(x[:, i, :]).unsqueeze(2)
+                tmp = self.cae(x[:, i:i+1, :]).unsqueeze(2)
+                cae_out = torch.concat((cae_out, tmp), dim=2)
+                # sharp of cae_out is (batch_size, 20, 36)
+                    
+            # print("CAE OUT: ", cae_out.shape)
+            # CAE OUT:  torch.Size([128, 20, 37]
+            
+            x = cae_out.permute(2, 0, 1)
+            # sharp of x is (36, batch_size, 20)
+        else:
+            x = x.permute(1, 0, 2)
         
         # Autoencoder 1D =======================================================
         # ae_out = torch.empty((x.shape[0], self.dout_mess, 0)).to(config.device)
@@ -223,6 +238,7 @@ class TransformerPredictor(nn.Module):
         # x = ae_out.permute(2, 0, 1)
         
         out = self.position_embedding(x)
+        # print("OUT: ", out.shape)
         out2 = self.transformer_encoder(out, src_key_padding_mask=mask)
         out = out2.permute(1, 0, 2)
         out = torch.sum(out, 1)
@@ -329,11 +345,12 @@ def prepare_fin(config):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--indir', type=str, default="data/ksm_transformer/")
-    parser.add_argument('--window_size', type=int, default=37)
-    parser.add_argument('--epoch', type=int, default=200)
+    parser.add_argument('--indir', type=str, default="data/ksm_30stride/")
+    parser.add_argument('--window_size', type=int, default=34)
+    parser.add_argument('--epoch', type=int, default=300)
     parser.add_argument('--batch_size', type=int, default=128)
     parser.add_argument('--lr', type=float, default=0.0001)
+    parser.add_argument('--mode', type=str, default='cae')
     args = parser.parse_args()
 
     config = Config(args)   
