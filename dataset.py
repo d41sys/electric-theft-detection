@@ -10,7 +10,7 @@ ID_LEN = 4 #CAN bus 2.0 has 29 bits
 DATA_LEN = 8 #Data field in Can message has 8 bytes
 
 class DatasetPrepare(Dataset):
-    def __init__(self, root_dir, sequence_size, pad_size, embed, max_time_position, gran, log_e, transform=None, is_train=True):
+    def __init__(self, root_dir, sequence_size, pad_size, embed, max_time_position, log_e, transform=None, is_train=True):
         if is_train:
             self.root_dir = os.path.join(root_dir, 'train')
         else:
@@ -20,7 +20,6 @@ class DatasetPrepare(Dataset):
         self.pad_size = pad_size
         self.embed = embed
         self.max_time_position = max_time_position
-        self.gran = gran
         self.log_e = log_e
         self.sequence_size = sequence_size
         self.total_size = len(os.listdir(self.root_dir))
@@ -51,8 +50,8 @@ class DatasetPrepare(Dataset):
         
         # PREPROCESS
         # data = torch.from_numpy(data)
-        # data = torch.tensor(data, dtype=torch.float32)
-        data = torch.tensor(data, dtype=torch.int64)
+        data = torch.tensor(data, dtype=torch.float32)
+        # data = torch.tensor(data, dtype=torch.int64)
         label = torch.tensor(label, dtype=torch.long)
         # print("DATA: ", data, " AND LENGTH: ", len(data))
         

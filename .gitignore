@@ -7,3 +7,12 @@ __pycache__/
 dataset
 .DS_Store
 save/
+CHD/
+model/
+models/
+training_result_images/
+pytorch-wgan/
+results/
+*.pkl
+logs/
+ETD/
