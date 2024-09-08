@@ -52,7 +52,7 @@ class Generator(torch.nn.Module):
 
 generator = Generator(1)
 # Load the pre-trained generator model
-generator.load_state_dict(torch.load('models/generator_26000.pkl'))
+generator.load_state_dict(torch.load('model/generator_last.pkl'))
 # Set the generator to evaluation mode
 
 # Move the generator to the GPU if available
@@ -74,7 +74,7 @@ def generate_synthetic_samples(generator, num_samples, latent_dim=100):
 
 # Number of synthetic samples to generate
 # num_synthetic_samples = 5
-num_synthetic_samples = 27840-8091
+num_synthetic_samples = 23266-2003
 
 # Generate synthetic samples
 synthetic_samples = generate_synthetic_samples(generator, num_synthetic_samples)

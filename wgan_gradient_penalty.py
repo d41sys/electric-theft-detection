@@ -182,12 +182,12 @@ class WGAN_GP(object):
         # self.logger.writer.flush()
         self.number_of_images = 10
 
-        self.generator_iters = 20000 #args.generator_iters
+        self.generator_iters = 10000 #args.generator_iters
         self.critic_iter = 5
         self.lambda_term = 10
         
-        # self.g_lr_scheduler = CosineWarmupScheduler(self.g_optimizer, warmup=50, max_iters=self.generator_iters*len_loader)
-        # self.d_lr_scheduler = CosineWarmupScheduler(self.d_optimizer, warmup=50, max_iters=self.generator_iters*len_loader)
+        self.g_lr_scheduler = CosineWarmupScheduler(self.g_optimizer, warmup=50, max_iters=self.generator_iters*len_loader)
+        self.d_lr_scheduler = CosineWarmupScheduler(self.d_optimizer, warmup=50, max_iters=self.generator_iters*len_loader)
 
     def get_torch_variable(self, arg):
         if self.cuda:
@@ -265,7 +265,7 @@ class WGAN_GP(object):
                 d_loss = d_loss_fake - d_loss_real + gradient_penalty
                 Wasserstein_D = d_loss_real - d_loss_fake
                 self.d_optimizer.step()
-                # self.d_lr_scheduler.step()
+                self.d_lr_scheduler.step()
                 print(f'  Discriminator iteration: {d_iter}/{self.critic_iter}, loss_fake: {d_loss_fake}, loss_real: {d_loss_real}')
 
             # Generator update
@@ -282,7 +282,7 @@ class WGAN_GP(object):
             g_loss.backward(mone)
             g_cost = -g_loss
             self.g_optimizer.step()
-            # self.g_lr_scheduler.step()
+            self.g_lr_scheduler.step()
             print(f'Generator iteration: {g_iter}/{self.generator_iters}, g_loss: {g_loss}')
             
             # Saving model and sampling images every 1000th generator iterations
@@ -504,39 +504,49 @@ class MinorityDataset(Dataset):
         label = torch.tensor(self.labels[idx], dtype=torch.float32)
         return sample, label
 
-def stride(x):
+def stride(x, output_shape, window_size):
     as_strided = np.lib.stride_tricks.as_strided
     # x = pd.Series(x) # no padding
     # print(len(x)) 1034 
     x = np.pad(pd.Series(x), (0, 2), 'constant') # padding 
     return as_strided(x, output_shape, (8*window_size, 8))
-        
-data = pd.read_csv('data/processed_data.csv')
-minority_data = data[data['FLAG'] == 1]
-majority_data = data[data['FLAG'] == 0]
-minority_data.shape, majority_data.shape
-
-y_minor = minority_data['FLAG']
-x_minor = minority_data.drop(columns=['FLAG', 'CONS_NO'])
-
-x_minor['data'] = x_minor[x_minor.columns].values.tolist()
-df_apr = x_minor['data']
 
 
-window_size = 28 # 4weeks
-output_shape = (1036 // window_size, window_size)
-strided_size = output_shape[0]
+if __name__ == '__main__':
+    # Preparing train datafile for trainning
+    # data = pd.read_csv('data/GAN_training.csv')
+    # minority_data = data[data['label'] == 1]
+    # majority_data = data[data['label'] == 0]
+    
+    # print("Minority and Majority data shape: ", minority_data.shape, majority_data.shape)
+    
+    # y_minor = minority_data['label']
+    # x_minor = minority_data.drop(columns=['label'])
+    
+    # print(x_minor.shape)
 
-df_apr = df_apr.apply(stride)
-df_dpr = df_apr.to_frame()
-df_dpr['label'] = y_minor
+    # x_minor['data'] = x_minor[x_minor.columns].values.tolist()
+    # df_apr = x_minor['data']
 
-# Assuming df_dpr is your DataFrame
-minor_dataset = MinorityDataset(df_dpr)
-minority_dataloader = DataLoader(minor_dataset, batch_size=64, shuffle=True)
 
-model = WGAN_GP(len(minority_dataloader))
+    # window_size = 28 # 4weeks
+    # output_shape = (1036 // window_size, window_size)
+    # strided_size = output_shape[0]
 
-generated_data = model.generate_synthetic_samples(minority_dataloader)
+    # df_apr = df_apr.apply(stride)
+    # df_dpr = df_apr.to_frame()
+    # df_dpr['label'] = y_minor
+    
+    data_loader = np.load('data/non_sampling/train_reduced_ver1.npz', allow_pickle=True)
+    
+    df_data = pd.DataFrame({key: data_loader[key] for key in data_loader.keys()})
 
-print(generated_data)
+    # Assuming df_dpr is your DataFrame
+    minor_dataset = MinorityDataset(df_data)
+    minority_dataloader = DataLoader(minor_dataset, batch_size=64, shuffle=True)
+
+    model = WGAN_GP(len(minority_dataloader))
+
+    generated_data = model.generate_synthetic_samples(minority_dataloader)
+
+    print(generated_data)

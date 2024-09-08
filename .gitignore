@@ -16,3 +16,16 @@ results/
 *.pkl
 logs/
 ETD/
+*.log
+non_ksm_transformer_2
+non_sampling
+non_sampling_2
+non_sampling_reduce_ouliner
+non_sampling_reduce_ouliner_15k
+non_sampling_reduce_ouliner_2
+non_sampling_reduce_ouliner_bsmote
+non_sampling_reduce_ouliner_bsmote1
+non_sampling_reduce_ouliner_ver1
+sampling_smoteen
+GAN_training_reduced
+transformer_model/
