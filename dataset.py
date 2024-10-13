@@ -11,7 +11,7 @@ DATA_LEN = 8 #Data field in Can message has 8 bytes
 
 class DatasetPrepare(Dataset):
     def __init__(self, root_dir, sequence_size, pad_size, embed, max_time_position, log_e, transform=None, is_train=True):
-        prefix = '_smoteen'
+        prefix = '_ksm_best'
         if is_train:
             # self.root_dir = os.path.join(root_dir, 'train_reduce_outliner')
             self.filename = '{}/{}.npz'.format(root_dir, 'train'+prefix)
@@ -69,20 +69,22 @@ class DatasetPrepare(Dataset):
         label = torch.tensor(self.label[idx], dtype=torch.long)
         # print("DATA: ", data, " AND LENGTH: ", len(data))
         
-        ori_seq_len = data.shape[0]
-        pad_len = self.sequence_size - ori_seq_len
+        # ori_seq_len = data.shape[0]
+        # print("ORI SEQ LEN: ", ori_seq_len)
+        # pad_len = self.sequence_size - ori_seq_len
         # print(pad_len)
         # dasdasf
         
-        data = F.pad(data.T, (0, pad_len)).T.numpy()
+        # data = F.pad(data.T, (0, pad_len)).T.numpy()
 
-        if pad_len == 0:
-            mask = np.array([False] * ori_seq_len)
-        else:
-            print("PAD LEN: ", pad_len)
-            mask = np.concatenate((np.array([False] * ori_seq_len), np.array([True] * pad_len)))
+        # if pad_len == 0:
+        #     mask = np.array([False] * ori_seq_len)
+        # else:
+        #     print("PAD LEN: ", pad_len)
+        #     mask = np.concatenate((np.array([False] * ori_seq_len), np.array([True] * pad_len)))
         
-        sample = {'data': data, 'mask': mask, 'label': label, 'idx': idx}
+        # sample = {'data': data, 'mask': mask, 'label': label, 'idx': idx}
+        sample = {'data': data, 'label': label, 'idx': idx}
         
         # print("DATA FEATURE: ", data, " AND LENGTH: ", len(data))
         # print("MASK FEATURE: ", mask, " AND LENGTH: ", len(mask))

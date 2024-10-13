@@ -46,7 +46,7 @@ def write_result(fin, label_y, pre_y):
     report = classification_report(label_y, pre_y)
     fin.write(report)
     fin.write('\n\n')
-    return f1
+    return f1, accuracy
 
 def cal_model_size(model):
     param_size = 0

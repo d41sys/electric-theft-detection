@@ -1,19 +1,7 @@
 import torch
-import torch.nn as nn
-import math
-from dataset import DatasetPrepare
-from torch.utils.data import DataLoader
-import numpy as np
-from sklearn.metrics import accuracy_score, recall_score, f1_score, precision_score, classification_report, confusion_matrix, roc_auc_score
-import optuna
 import os
 import time
-import warnings
 import argparse
-import torch.nn.functional as F
-import torch.optim as optim
-import random
-import pandas as pd
 
 def prepare_fin(config):
     fin = open(config.result_file, 'a')
@@ -27,20 +15,22 @@ def prepare_fin(config):
     
 def parser_process():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--indir', type=str, default="data/sampling")
+    parser.add_argument('--indir', type=str, default="data/ksm_transformer_best_result")
     parser.add_argument('--model', type=str, default="old")
     parser.add_argument('--log_mode', type=str, default="train")
     parser.add_argument('--window_size', type=int, default=37)
     parser.add_argument('--epoch', type=int, default=300)
     parser.add_argument('--batch_size', type=int, default=32)
     parser.add_argument('--lr', type=float, default=0.0001)
-    parser.add_argument('--mode', type=str, default='cae')
-    args = parser.parse_args()
+    parser.add_argument('--mode', type=str, default='transformer')
+    parser.add_argument('--model_name', type=str, default='KSM_Transformer')
+    parser.add_argument('--model_path', type=str, default='model/')
+    args,_ = parser.parse_known_args()
     return args
 
 class Config:
     def __init__(self, args):
-        self.model_name = 'ETD'
+        self.model_name = args.model_name
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'mps' if getattr(torch, 'has_mps', False) else 'cpu')
 
         if args.mode == 'cae':
@@ -59,6 +49,7 @@ class Config:
             self.nhead = 28  # ori: 5
             print("Not using")
 
+        self.model_path = args.model_path
         self.pad_size = args.window_size  
         self.window_size = args.window_size  
         self.max_time_position = 10000
@@ -80,7 +71,7 @@ class Config:
         self.lr = args.lr  # 0.0001 learning rate
         self.root_dir = args.indir
 
-        self.model_save_path = './model/' + self.model_name + '/'
+        self.model_save_path = args.model_path + self.model_name + '/'
         if not os.path.exists(self.model_save_path):
             os.mkdir(self.model_save_path)
         self.result_file = 'results/' + args.indir.split('/')[1] + '_' + args.mode + '.txt'

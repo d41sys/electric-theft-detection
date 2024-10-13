@@ -4,7 +4,7 @@ import math
 from dataset import DatasetPrepare
 from torch.utils.data import DataLoader
 import numpy as np
-from sklearn.metrics import accuracy_score, recall_score, f1_score, precision_score, classification_report, confusion_matrix, roc_auc_score
+from sklearn.metrics import accuracy_score, recall_score, f1_score, precision_score, classification_report, confusion_matrix, roc_auc_score, roc_curve, auc
 import optuna
 import os
 import time
@@ -23,6 +23,11 @@ from transformer_model.transformer import TransformerAnomalyPredictor
 from config import Config, prepare_fin, parser_process
 from utils import draw_confusion, write_result, cal_model_size, print_model_info_pytorch
 from data_loader import data_preparing
+import matplotlib.pyplot as plt
+
+import shap
+import lime
+import lime.lime_tabular
 
 warnings.filterwarnings("ignore")
 
@@ -30,7 +35,8 @@ layout = {
     "CAE-Transformer": {
         "losses": ["Multiline", ["loss/train", "loss/test"]],
         "learning rate": ["Multiline", ["learning_rate/lr"]],
-        "auc": ["Multiline", ["AUC"]]
+        "auc": ["Multiline", ["AUC"]],
+        "accuracy": ["Multiline", ["accuracy/train", "accuracy/test"]],
     },
 }
 
@@ -64,10 +70,9 @@ if __name__ == '__main__':
     
     opt = optim.AdamW(model.parameters(), lr=config.lr)
     lr_scheduler = CosineWarmupScheduler(opt, warmup=50, max_iters=config.epoch_num*len(train_loader))
-    
+        
     mapk_scores = []
     auc_scores = []
-    
     
     for epoch in range(start_epoch + 1, config.epoch_num):
         fin = open(config.result_file, 'a')
@@ -77,17 +82,17 @@ if __name__ == '__main__':
         epoch_train_loss = 0  # Initialize epoch training loss
         model.train()
         
+        correct_predictions = 0
+        total_predictions = 0
+    
         for i, sample_batch in enumerate(train_loader):
             batch_data = sample_batch['data'].type(torch.FloatTensor).to(config.device)
             # batch_data = sample_batch['data'].type(torch.IntTensor).to(config.device)
-            batch_mask = sample_batch['mask'].to(config.device)
+            # batch_mask = sample_batch['mask'].to(config.device)
             batch_label = sample_batch['label'].to(config.device)
             
-            if config.model == 'old':
-                out = model(batch_data, batch_mask)
-            elif config.model == 'new':
-                out = model(batch_data)
-                
+            out = model(batch_data)
+            
             # print("DATA: ", batch_data)
             # print("LABEL: ",batch_label)
             # print("OUT: ", out)
@@ -100,10 +105,18 @@ if __name__ == '__main__':
             opt.step()
             lr_scheduler.step()
             
+            _, predicted = torch.max(out, 1)
+            correct_predictions += (predicted == batch_label).sum().item()
+            total_predictions += batch_label.size(0)
+            
             if i % 20 == 0:
                 print('iter {} loss: '.format(i), loss.item())
         
-        avg_train_loss = epoch_train_loss / len(train_loader)        
+        avg_train_loss = epoch_train_loss / len(train_loader)
+        accuracy_train = correct_predictions / total_predictions
+
+        print(f'Training Loss: {avg_train_loss:.4f}, Training Accuracy: {accuracy_train:.4f}')
+             
         torch.save(model, (config.model_save_path + config.model_name + '_model_{}.pth').format(epoch))
         
         # test
@@ -114,13 +127,10 @@ if __name__ == '__main__':
         with torch.no_grad():
             for j, test_sample_batch in enumerate(test_loader):
                 test_data = test_sample_batch['data'].type(torch.FloatTensor).to(config.device)
-                test_mask = test_sample_batch['mask'].to(config.device)
+                # test_mask = test_sample_batch['mask'].to(config.device)
                 test_label = test_sample_batch['label'].to(config.device)
                 
-                if config.model == 'old':
-                    test_out = model(test_data, test_mask)
-                elif config.model == 'new':
-                    test_out = model(test_data)
+                test_out = model(test_data)
                 
                 loss_t = criterion(test_out, test_label)
                 total_test_loss += loss_t.item()  # Accumulate test loss
@@ -129,26 +139,29 @@ if __name__ == '__main__':
                 
                 pre_y = np.concatenate([pre_y, pre], 0)
                 label_y = np.concatenate([label_y, test_label.cpu().numpy()], 0)
+                
             # print('label_y: ', label_y)
             # print('pre_y: ', pre_y)
 
             avg_test_loss = total_test_loss / len(test_loader)
             
             # Calculate AUC
-            auc = roc_auc_score(label_y, pre_y)
-            auc_scores.append(auc)
-            print(f'Epoch {epoch+1}/{config.epoch_num}, AUC: {auc:.4f}')
+            auc_value = roc_auc_score(label_y, pre_y)
+            auc_scores.append(auc_value)
+            print(f'Epoch {epoch+1}/{config.epoch_num}, AUC: {auc_value:.4f}')
             
             draw_confusion(label_y, pre_y)
-            write_result(fin, label_y, pre_y)
+            f1_test, accuracy_test = write_result(fin, label_y, pre_y)
         fin.close()
     
         # ============ TensorBoard logging ============# 
         info = {
             'loss/train': avg_train_loss,
             'loss/test': avg_test_loss,
+            'accuracy/train': accuracy_train,
+            'accuracy/test': accuracy_test,
             'learning_rate/lr': opt.param_groups[0]['lr'],
-            'AUC': auc
+            'AUC': auc_value
         }
         
         for tag, value in info.items():
